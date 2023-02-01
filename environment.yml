@@ -1,0 +1,57 @@
+name: flip-repro
+channels:
+  - pytorch
+  - conda-forge
+  - anaconda
+  - defaults
+dependencies:
+  - blas=1.0=openblas
+  - bottleneck=1.3.4=py310h96f19d2_0
+  - bzip2=1.0.8=h620ffc9_4
+  - ca-certificates=2022.12.7=h4653dfc_0
+  - certifi=2022.12.7=pyhd8ed1ab_0
+  - colorama=0.4.6=pyhd8ed1ab_0
+  - fftw=3.3.9=h1a28f6b_1
+  - flit-core=3.6.0=pyhd3eb1b0_0
+  - fsspec=2023.1.0=pyhd8ed1ab_0
+  - joblib=1.1.0=pyhd3eb1b0_0
+  - libcxx=12.0.0=hf6beb65_1
+  - libffi=3.4.2=hc377ac9_4
+  - libgfortran=5.0.0=11_2_0_he6877d6_26
+  - libgfortran5=11.2.0=he6877d6_26
+  - libopenblas=0.3.20=hea475bc_0
+  - lightning-utilities=0.6.0.post0=pyhd8ed1ab_0
+  - llvm-openmp=12.0.0=haf9daa7_1
+  - ncurses=6.3=h1a28f6b_2
+  - numexpr=2.8.1=py310h5a06f4b_2
+  - numpy=1.22.3=py310hdb36b11_0
+  - numpy-base=1.22.3=py310h5e3e9f0_0
+  - openssl=1.1.1s=h03a7124_1
+  - packaging=21.3=pyhd3eb1b0_0
+  - pandas=1.4.2=py310hc377ac9_0
+  - pip=21.2.4=py310hca03da5_0
+  - pyparsing=3.0.4=pyhd3eb1b0_0
+  - python=3.10.4=hbdb9e5c_0
+  - python-dateutil=2.8.2=pyhd3eb1b0_0
+  - pytorch=1.13.1=py3.10_0
+  - pytorch-lightning=1.9.0=pyhd8ed1ab_1
+  - pytz=2022.1=py310hca03da5_0
+  - pyyaml=6.0=py310h80987f9_1
+  - readline=8.1.2=h1a28f6b_1
+  - scikit-learn=1.0.2=py310h59830a0_1
+  - scipy=1.7.3=py310h4af22ef_2
+  - setuptools=61.2.0=py310hca03da5_0
+  - six=1.16.0=pyhd3eb1b0_1
+  - sqlite=3.38.5=h1058600_0
+  - threadpoolctl=2.2.0=pyh0d69192_0
+  - tk=8.6.12=hb8d0fd4_0
+  - torchmetrics=0.11.1=pyhd8ed1ab_0
+  - tqdm=4.64.1=pyhd8ed1ab_0
+  - typing-extensions=4.4.0=py310hca03da5_0
+  - typing_extensions=4.4.0=py310hca03da5_0
+  - tzdata=2022a=hda174b7_0
+  - wheel=0.37.1=pyhd3eb1b0_0
+  - xz=5.2.5=h1a28f6b_1
+  - yaml=0.2.5=h3422bc3_2
+  - zlib=1.2.12=h5a0b063_2
+prefix: /opt/homebrew/anaconda3/envs/flip-repro
