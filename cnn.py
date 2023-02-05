@@ -3,7 +3,7 @@ import torch
 from torch import optim, nn
 from torch.nn import functional as F
 import pytorch_lightning as pl
-from scipy.stats import spearmanr
+from torchmetrics import SpearmanCorrCoef, MeanSquaredError
 
 class MaskedConv1d(nn.Conv1d):
     """ A masked 1-dimensional convolution layer.
@@ -61,6 +61,11 @@ class CNN(pl.LightningModule):
         self.n_tokens = n_tokens
         self.dropout = nn.Dropout(dropout) # TODO: actually add this to model
         self.input_size = input_size
+        self.val_spearman = SpearmanCorrCoef()
+        self.val_loss = MeanSquaredError()
+        self.test_spearman = SpearmanCorrCoef()
+        self.test_loss = MeanSquaredError()
+
 
     def forward(self, x, mask):
         # encoder
@@ -79,19 +84,44 @@ class CNN(pl.LightningModule):
         tgt = tgt.float()
         mask = mask.float()
         output = self(src, mask)
-        loss = F.mse_loss(output, tgt)
-        return loss
-
+        return F.mse_loss(output, tgt)
+        
     def validation_step(self, batch, batch_idx):
-        print('running validation step')
         src, tgt, mask = batch
         src = src.float()
         tgt = tgt.float()
         mask = mask.float()
         output = self(src, mask)
-        self.log("spearmanr", spearmanr(tgt.numpy(), output.numpy()).correlation)
-        print(output.size(), tgt.size())
+        
+        output = output.flatten()
+        tgt = tgt.flatten()
+        self.log("val_spearman", self.val_spearman(output, tgt), on_step=False, on_epoch=True)
+        self.log("val_loss", self.val_loss(output, tgt), on_step=False, on_epoch=True)
+        # self.val_spearman.update(output, tgt)
         return F.mse_loss(output, tgt)
+    
+    # def validation_epoch_end(self, outputs):
+    #     self.log("spearmanr", self.val_spearman.compute())
+    #     self.val_spearman.reset()
+
+    def test_step(self, batch, batch_idx):
+        src, tgt, mask = batch
+        src = src.float()
+        tgt = tgt.float()
+        mask = mask.float()
+        output = self(src, mask)
+
+        output = output.flatten()
+        tgt = tgt.flatten()
+        self.log("test_spearman", self.test_spearman(output, tgt), on_step=False, on_epoch=True)
+        self.log("test_loss", self.test_loss(output, tgt), on_step=False, on_epoch=True)
+        # self.test_spearman.update(output, tgt)
+        return F.mse_loss(output, tgt, reduction='none')
+
+    # def test_epoch_end(self, outputs):
+    #     s = self.test_spearman.compute()
+    #     print("Spearman" + str(s))
+    #     print("Average loss" + str(torch.cat(outputs).mean()))
 
     def configure_optimizers(self):
         optimizer = optim.Adam([
