@@ -97,12 +97,7 @@ class CNN(pl.LightningModule):
         tgt = tgt.flatten()
         self.log("val_spearman", self.val_spearman(output, tgt), on_step=False, on_epoch=True)
         self.log("val_loss", self.val_loss(output, tgt), on_step=False, on_epoch=True)
-        # self.val_spearman.update(output, tgt)
         return F.mse_loss(output, tgt)
-    
-    # def validation_epoch_end(self, outputs):
-    #     self.log("spearmanr", self.val_spearman.compute())
-    #     self.val_spearman.reset()
 
     def test_step(self, batch, batch_idx):
         src, tgt, mask = batch
@@ -115,13 +110,7 @@ class CNN(pl.LightningModule):
         tgt = tgt.flatten()
         self.log("test_spearman", self.test_spearman(output, tgt), on_step=False, on_epoch=True)
         self.log("test_loss", self.test_loss(output, tgt), on_step=False, on_epoch=True)
-        # self.test_spearman.update(output, tgt)
         return F.mse_loss(output, tgt, reduction='none')
-
-    # def test_epoch_end(self, outputs):
-    #     s = self.test_spearman.compute()
-    #     print("Spearman" + str(s))
-    #     print("Average loss" + str(torch.cat(outputs).mean()))
 
     def configure_optimizers(self):
         optimizer = optim.Adam([
