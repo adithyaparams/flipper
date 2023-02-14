@@ -4,7 +4,8 @@ import numpy as np
 from torch import optim, nn
 from torch.nn import functional as F
 import pytorch_lightning as pl
-from torchmetrics import SpearmanCorrCoef, MeanSquaredError
+from torchmetrics import SpearmanCorrCoef, MeanSquaredError, SumMetric
+from data import Tokenizer
 
 class MaskedConv1d(nn.Conv1d):
     """ A masked 1-dimensional convolution layer.
@@ -65,6 +66,7 @@ class CNN(pl.LightningModule):
         self.val_loss = MeanSquaredError()
         self.test_spearman = SpearmanCorrCoef()
         self.test_loss = MeanSquaredError()
+        self.num_epochs = SumMetric()
 
     def forward(self, x, mask):
         # encoder
@@ -90,6 +92,7 @@ class CNN(pl.LightningModule):
         tgt = tgt.flatten()
         self.log("val_spearman", self.val_spearman(output, tgt), on_step=False, on_epoch=True)
         self.log("val_loss", self.val_loss(output, tgt), on_step=False, on_epoch=True)
+        self.log("num_epochs", self.num_epochs(1), on_step=False, on_epoch=True)
         return F.mse_loss(output, tgt)
 
     def test_step(self, batch, batch_idx):
@@ -123,24 +126,21 @@ class CNN(pl.LightningModule):
 
         return torch.stack(ohe)
 
-class CNNTokenizer(object):
+class CNNTokenizer(Tokenizer):
     alphabet = 'ARNDCQEGHILKMFPSTWYVXU'
     a_to_t = {a: i for i, a in enumerate(alphabet)}
     n_tokens = len(alphabet)
+
+    def __init__(self, pad_tok: int = 0) -> None:
+        self._pad_tok = pad_tok
 
     @property
     def vocab_size(self) -> int:
         return len(CNNTokenizer.alphabet)
 
+    @property
+    def pad_tok(self) -> int:
+        return self._pad_tok
+
     def tokenize(self, seq: str) -> list[int]:
         return [CNNTokenizer.a_to_t[a] for a in seq]
-
-    def encode(self, seq: str, max_len: int, pad_tok: int = 0) -> torch.Tensor:
-        """
-        Tokenizes and pads a sequence
-        """
-        seq_tokenized = torch.tensor(self.tokenize(seq), dtype=torch.int64)
-        seq_len = len(seq_tokenized)
-        padded = F.pad(seq_tokenized, (0, max_len - len(seq_tokenized)), value=pad_tok)
-
-        return padded, seq_len

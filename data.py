@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 import re
 from typing import List, Any
+from abc import ABC, abstractmethod
 
 class DataModule(pl.LightningDataModule):
     def __init__(self, dataset, split, batch_size, encoder, start=0, end=None):
@@ -41,14 +42,12 @@ class DataModule(pl.LightningDataModule):
 
         print('loaded train/val/test:', len(self.train), len(self.val), len(self.test))
 
-        # self.collate = ASCollater(vocab, Tokenizer(vocab), pad=True)
-
     def train_dataloader(self):
         return DataLoader(
             SequenceDataset(self.train), 
             collate_fn=self.collate, 
             batch_size=self.batch_size, 
-            shuffle=True, 
+            # shuffle=True, 
             num_workers=4
         )
 
@@ -70,44 +69,38 @@ class DataModule(pl.LightningDataModule):
             num_workers=4
         )
 
-    # def collate_fn(self, batch):
-    #     print("got to first collate")
-    #     data = tuple(zip(*batch))
-    #     sequences = data[0]
-    #     max_len = max([len(seq) for seq in sequences]) #TODO: this will be inaccurate if len(encoder(seq)) != len(seq)
-    #     all_encoded, all_masks = [], []
+class Tokenizer(ABC):
+    @property
+    @abstractmethod
+    def pad_tok(self) -> int:
+        pass
 
-    #     for seq in sequences:
-    #         seq_encoded, seq_len = self.encoder(seq, max_len)
-    #         mask = F.pad(torch.ones(seq_len), (0, max_len - seq_len))
-
-    #         all_encoded.append(seq_encoded)
-    #         all_masks.append(mask)
-
-    #     y = torch.tensor(data[1]).unsqueeze(-1)
-            
-    #     return torch.stack(all_encoded), y, torch.stack(all_masks)
+    @abstractmethod
+    def tokenize(self, seq: str) -> list[int]:
+        pass
 
 class Collator(object):
-    def __init__(self, encoder):
-        self.encoder = encoder
+    def __init__(self, tokenizer: Tokenizer):
+        self.tokenizer = tokenizer
 
     def __call__(self, batch) -> tuple[torch.Tensor]:
         data = tuple(zip(*batch))
         sequences = data[0]
-        max_len = max([len(seq) for seq in sequences]) #TODO: this will be inaccurate if len(encoder(seq)) != len(seq)
-        all_encoded, all_masks = [], []
+        seq_tokenized = [torch.tensor(self.tokenizer.tokenize(seq)) for seq in sequences]
+        max_len = max([len(seq) for seq in seq_tokenized])
+        seq_encoded = torch.empty((len(seq_tokenized), max_len), dtype=torch.int64)
+        seq_encoded.fill_(self.tokenizer.pad_tok)
 
-        for seq in sequences:
-            seq_encoded, seq_len = self.encoder.encode(seq, max_len)
+        masks = []
+        for i, seq in enumerate(seq_tokenized):
+            seq_len = len(seq)
+            seq_encoded[i, :seq_len] = seq
             mask = F.pad(torch.ones(seq_len), (0, max_len - seq_len))
-
-            all_encoded.append(seq_encoded)
-            all_masks.append(mask)
+            masks.append(mask)
 
         y = torch.tensor(data[1]).unsqueeze(-1)
 
-        return torch.stack(all_encoded), y.float(), torch.stack(all_masks).float()
+        return seq_encoded, y.float(), torch.stack(masks).float()
 
 class SequenceDataset(Dataset):
     def __init__(self, data):
