@@ -1,5 +1,6 @@
 import os
 import torch
+import numpy as np
 from torch import optim, nn
 from torch.nn import functional as F
 import pytorch_lightning as pl
@@ -53,12 +54,11 @@ class LengthMaxPool1D(nn.Module):
 
 
 class CNN(pl.LightningModule):
-    def __init__(self, n_tokens, kernel_size, input_size, dropout):
+    def __init__(self, kernel_size, input_size, dropout):
         super(CNN, self).__init__()
-        self.encoder = MaskedConv1d(n_tokens, input_size, kernel_size=kernel_size)
+        self.encoder = MaskedConv1d(CNNTokenizer.n_tokens, input_size, kernel_size=kernel_size)
         self.embedding = LengthMaxPool1D(linear=True, in_dim=input_size, out_dim=input_size*2)
         self.decoder = nn.Linear(input_size*2, 1)
-        self.n_tokens = n_tokens
         self.dropout = nn.Dropout(dropout) # TODO: actually add this to model
         self.input_size = input_size
         self.val_spearman = SpearmanCorrCoef()
@@ -66,10 +66,9 @@ class CNN(pl.LightningModule):
         self.test_spearman = SpearmanCorrCoef()
         self.test_loss = MeanSquaredError()
 
-
     def forward(self, x, mask):
         # encoder
-        x = F.relu(self.encoder(x, input_mask=mask.repeat(self.n_tokens, 1, 1).permute(1, 2, 0)))
+        x = F.relu(self.encoder(x, input_mask=mask.repeat(CNNTokenizer.n_tokens, 1, 1).permute(1, 2, 0)))
         x = x * mask.repeat(self.input_size, 1, 1).permute(1, 2, 0)
         # embed
         x = self.embedding(x)
@@ -80,18 +79,12 @@ class CNN(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         src, tgt, mask = batch
-        src = src.float()
-        tgt = tgt.float()
-        mask = mask.float()
-        output = self(src, mask)
+        output = self(self.generate_ohe(src).float(), mask)
         return F.mse_loss(output, tgt)
         
     def validation_step(self, batch, batch_idx):
         src, tgt, mask = batch
-        src = src.float()
-        tgt = tgt.float()
-        mask = mask.float()
-        output = self(src, mask)
+        output = self(self.generate_ohe(src).float(), mask)
         
         output = output.flatten()
         tgt = tgt.flatten()
@@ -101,10 +94,7 @@ class CNN(pl.LightningModule):
 
     def test_step(self, batch, batch_idx):
         src, tgt, mask = batch
-        src = src.float()
-        tgt = tgt.float()
-        mask = mask.float()
-        output = self(src, mask)
+        output = self(self.generate_ohe(src).float(), mask)
 
         output = output.flatten()
         tgt = tgt.flatten()
@@ -119,3 +109,38 @@ class CNN(pl.LightningModule):
             {'params': self.decoder.parameters(), 'lr': 5e-6, 'weight_decay': 0.05}
         ])
         return optimizer
+
+    def generate_ohe(self, sequences: torch.Tensor) -> torch.Tensor:
+        max_len = sequences.shape[1]
+        seq_transposed = [seq.view(-1,1) for seq in sequences]
+
+        ohe = []
+        for seq in seq_transposed:
+            onehot = torch.FloatTensor(max_len, len(CNNTokenizer.alphabet))
+            onehot.zero_()
+            onehot.scatter_(1, seq, 1)
+            ohe.append(onehot)
+
+        return torch.stack(ohe)
+
+class CNNTokenizer(object):
+    alphabet = 'ARNDCQEGHILKMFPSTWYVXU'
+    a_to_t = {a: i for i, a in enumerate(alphabet)}
+    n_tokens = len(alphabet)
+
+    @property
+    def vocab_size(self) -> int:
+        return len(CNNTokenizer.alphabet)
+
+    def tokenize(self, seq: str) -> list[int]:
+        return [CNNTokenizer.a_to_t[a] for a in seq]
+
+    def encode(self, seq: str, max_len: int, pad_tok: int = 0) -> torch.Tensor:
+        """
+        Tokenizes and pads a sequence
+        """
+        seq_tokenized = torch.tensor(self.tokenize(seq), dtype=torch.int64)
+        seq_len = len(seq_tokenized)
+        padded = F.pad(seq_tokenized, (0, max_len - len(seq_tokenized)), value=pad_tok)
+
+        return padded, seq_len

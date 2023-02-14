@@ -1,7 +1,7 @@
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping
-from cnn import CNN
-from gb1 import DataModule, vocab
+from cnn import CNN, CNNTokenizer
+from data import DataModule
 from csv import writer
 from pathlib import Path
 
@@ -18,14 +18,17 @@ if __name__ == "__main__":
 
     results_dir = Path(RESULTS_DIR)
     results_dir.mkdir(exist_ok=True)
-
-    model = CNN(len(vocab), kernel_size, input_size, dropout)
-    gb1 = DataModule('gb1', '{}.csv'.format(split), batch_size)
+    model = CNN(kernel_size, input_size, dropout)
+    gb1 = DataModule('gb1', '{}.csv'.format(split), batch_size, CNNTokenizer())
+    # max_epochs for cnn is 100, esm is 500
     trainer = Trainer(callbacks=[EarlyStopping(monitor='val_spearman', mode='max', patience=20)])
+    # trainer = Trainer(callbacks=[EarlyStopping(monitor='val_loss', mode='min', patience=20)]) # ESM trainer
     trainer.fit(model, datamodule=gb1)
 
     val_dict = trainer.validate(datamodule=gb1)
     test_dict = trainer.test(datamodule=gb1)
 
+    print(val_dict, test_dict)
+
     with open(results_dir / (dataset+'_results.csv'), 'a', newline='') as f:  
-        writer(f).writerow([dataset, model, split, kernel_size, input_size, dropout, batch_size, *val_dict.values(), *test_dict.values()])
+        writer(f).writerow([dataset, model, split, kernel_size, input_size, dropout, batch_size, *val_dict[0].values(), *test_dict[0].values()])
