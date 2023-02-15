@@ -32,12 +32,12 @@ class CNN(pl.LightningModule):
         return output
 
     def training_step(self, batch, batch_idx):
-        src, tgt, mask = batch
+        src, tgt, mask, _ = batch
         output = self(self.generate_ohe(src).float(), mask)
         return F.mse_loss(output, tgt)
         
     def validation_step(self, batch, batch_idx):
-        src, tgt, mask = batch
+        src, tgt, mask, _ = batch
         output = self(self.generate_ohe(src).float(), mask)
         
         output = output.flatten()
@@ -48,7 +48,7 @@ class CNN(pl.LightningModule):
         return F.mse_loss(output, tgt)
 
     def test_step(self, batch, batch_idx):
-        src, tgt, mask = batch
+        src, tgt, mask, _ = batch
         output = self(self.generate_ohe(src).float(), mask)
 
         output = output.flatten()
