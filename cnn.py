@@ -1,58 +1,10 @@
-import os
 import torch
-import numpy as np
 from torch import optim, nn
 from torch.nn import functional as F
 import pytorch_lightning as pl
 from torchmetrics import SpearmanCorrCoef, MeanSquaredError, SumMetric
 from data import Tokenizer
-
-class MaskedConv1d(nn.Conv1d):
-    """ A masked 1-dimensional convolution layer.
-
-    Takes the same arguments as torch.nn.Conv1D, except that the padding is set automatically.
-
-         Shape:
-            Input: (N, L, in_channels)
-            input_mask: (N, L, 1), optional
-            Output: (N, L, out_channels)
-    """
-
-    def __init__(self, in_channels: int, out_channels: int,
-                 kernel_size: int, stride: int=1, dilation: int=1, groups: int=1,
-                 bias: bool=True):
-        """
-        :param in_channels: input channels
-        :param out_channels: output channels
-        :param kernel_size: the kernel width
-        :param stride: filter shift
-        :param dilation: dilation factor
-        :param groups: perform depth-wise convolutions
-        :param bias: adds learnable bias to output
-        """
-        padding = dilation * (kernel_size - 1) // 2
-        super().__init__(in_channels, out_channels, kernel_size, stride=stride, dilation=dilation,
-                                           groups=groups, bias=bias, padding=padding)
-
-    def forward(self, x, input_mask=None):
-        if input_mask is not None:
-            x = x * input_mask
-        return super().forward(x.transpose(1, 2)).transpose(1, 2)
-
-
-class LengthMaxPool1D(nn.Module):
-    def __init__(self, in_dim, out_dim, linear=False):
-        super().__init__()
-        self.linear = linear
-        if self.linear:
-            self.layer = nn.Linear(in_dim, out_dim)
-
-    def forward(self, x):
-        if self.linear:
-            x = F.relu(self.layer(x))
-        x = torch.max(x, dim=1)[0]
-        return x
-
+from modules import MaskedConv1d, LengthMaxPool1D
 
 class CNN(pl.LightningModule):
     def __init__(self, kernel_size, input_size, dropout):
