@@ -15,6 +15,7 @@ class CNN(pl.LightningModule):
         self.dropout = nn.Dropout(dropout) # TODO: actually add this to model
         self.input_size = input_size
         self.val_spearman = SpearmanCorrCoef()
+        self.training_loss = MeanSquaredError()
         self.val_loss = MeanSquaredError()
         self.test_spearman = SpearmanCorrCoef()
         self.test_loss = MeanSquaredError()
@@ -33,7 +34,9 @@ class CNN(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         src, tgt, mask, _ = batch
-        output = self(self.generate_ohe(src).float(), mask)
+        ohe = self.generate_ohe(src).float()
+        output = self(ohe, mask)
+        self.log("training_loss", self.training_loss(output, tgt), on_step=False, on_epoch=True)
         return F.mse_loss(output, tgt)
         
     def validation_step(self, batch, batch_idx):

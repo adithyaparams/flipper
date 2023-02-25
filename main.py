@@ -1,5 +1,5 @@
 import argparse
-from pytorch_lightning import Trainer
+from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import EarlyStopping
 from cnn import CNN, CNNTokenizer
 from data import DataModule
@@ -17,6 +17,10 @@ def create_parser():
     return parser
 
 if __name__ == "__main__":
+    seed_everything(10)
+    # random.seed(10)
+    # torch.manual_seed(10)
+
     dataset = 'gb1'
     model = 'cnn'
     split = 'three_vs_rest'
@@ -33,7 +37,8 @@ if __name__ == "__main__":
     model = CNN(kernel_size, input_size, dropout)
     gb1 = DataModule(args.dataset, '{}.csv'.format(args.split), batch_size, CNNTokenizer())
     # max_epochs for cnn is 100, esm is 500
-    trainer = Trainer(callbacks=[EarlyStopping(monitor='val_spearman', mode='max', patience=20)], accelerator='gpu', devices=[0], max_epochs=args.max_epochs)
+    # trainer = Trainer(callbacks=[EarlyStopping(monitor='val_spearman', mode='max', patience=20)], accelerator='gpu', devices=[0], max_epochs=args.max_epochs)
+    trainer = Trainer(callbacks=[EarlyStopping(monitor='val_spearman', mode='max', patience=20)], max_epochs=args.max_epochs)
     # trainer = Trainer(callbacks=[EarlyStopping(monitor='val_loss', mode='min', patience=20)]) # ESM trainer
     trainer.fit(model, datamodule=gb1)
 

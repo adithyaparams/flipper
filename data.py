@@ -45,7 +45,7 @@ class DataModule(pl.LightningDataModule):
             SequenceDataset(self.train), 
             collate_fn=self.collate, 
             batch_size=self.batch_size, 
-            # shuffle=True, 
+            shuffle=True, 
             num_workers=4
         )
 
