@@ -9,6 +9,27 @@ import re
 from typing import List, Any
 from abc import ABC, abstractmethod
 
+
+def preprocess_aav_data(df):
+    # Source: https://www.uniprot.org/uniparc/UPI00000F124C/entry
+    wild_type_sequence = "MAADGYLPDWLEDTLSEGIRQWWKLKPGPPPPKPAERHKDDSRGLVLPGYKYLGPFNGLDKGEPVNEADAAALEHDKAYDRQLDSGDNPYLKYNHADAEFQERLKEDTSFGGNLGRAVFQAKKRVLEPLGLVEEPVKTAPGKKRPVEHSPVEPDSSSGTGKAGQQPARKRLNFGQTGDADSVPDPQPLGQPPAAPSGLGTNTMATGSGAPMADNNEGADGVGNSSGNWHCDSTWMGDRVITTSTRTWALPTYNNHLYKQISSQSGASNDNHYFGYSTPWGYFDFNRFHCHFSPRDWQRLINNNWGFRPKRLNFKLFNIQVKEVTQNDGTTTIANNLTSTVQVFTDSEYQLPYVLGSAHQGCLPPFPADVFMVPQYGYLTLNNGSQAVGRSSFYCLEYFPSQMLRTGNNFTFSYTFEDVPFHSSYAHSQSLDRLMNPLIDQYLYYLSRTNTPSGTTTQSRLQFSQAGASDIRDQSRNWLPGPCYRQQRVSKTSADNNNSEYSWTGATKYHLNGRDSLVNPGPAMASHKDDEEKFFPQSGVLIFGKQGSEKTNVDIEKVMITDEEEIRTTNPVATEQYGSVSTNLQRGNRQAATADVNTQGVLPGMVWQDRDVYLQGPIWAKIPHTDGHFHPSPLMGGFGLKHPPPQILIKNTPVPANPSTTFSAAKFASFITQYSTGQVSVEIEWELQKENSKRWNPEIQYTSNYNKSVNVDFTVDTNGVYSEPRPIGTRYLTRNL"
+    wild_type_mutation_start, region_length = 560, 28 
+
+
+    df["length_difference"] = df["sequence"].map(lambda s: len(s) - len(wild_type_sequence))
+    df["full_length_sequence"] = df["sequence"].copy()
+    df["sequence"] = df.apply(
+        lambda row: row.sequence[wild_type_mutation_start: wild_type_mutation_start + region_length + row.length_difference],
+        axis=1
+    )
+    return df
+
+
+preprocessors = {
+    "aav": preprocess_aav_data,
+}
+
+
 class DataModule(pl.LightningDataModule):
     def __init__(self, dataset, split, batch_size, encoder, start=0, end=None):
         super().__init__()
@@ -27,18 +48,17 @@ class DataModule(pl.LightningDataModule):
             
         df = pd.read_csv(PATH)
 
-        if self.end is not None:
-            print('shortening gb1 to first 56 AAs')
-            df.sequence = df.sequence.apply(lambda s: s[self.start : self.end])
         
         df.sequence = df.sequence.apply(lambda s: re.sub(r'[^A-Z]', '', s.upper())) #remove special characters
+        if self.dataset in preprocessors:
+            df = preprocessors[self.dataset](df)
         max_length = max(df.sequence.str.len())
         
         self.test = df[df.set == 'test']
         self.train = df[(df.set == 'train')&(df.validation.isna())] # change False for meltome 
         self.val = df[df.validation == True]
 
-        print('loaded train/val/test:', len(self.train), len(self.val), len(self.test))
+        print('loaded train/val/test:', len(self.train), len(self.val), len(self.test), "with max length:", max_length)
 
     def train_dataloader(self):
         return DataLoader(
@@ -66,7 +86,9 @@ class DataModule(pl.LightningDataModule):
             # shuffle=True, 
             num_workers=4
         )
+    
 
+        
 class Tokenizer(ABC):
     @property
     @abstractmethod
