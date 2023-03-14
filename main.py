@@ -5,6 +5,7 @@ from cnn import CNN, CNNTokenizer
 from data import DataModule
 from csv import writer
 from pathlib import Path
+import os
 
 RESULTS_DIR = 'results/'
 
@@ -37,13 +38,15 @@ if __name__ == "__main__":
     model = CNN(kernel_size, input_size, dropout)
     gb1 = DataModule(args.dataset, '{}.csv'.format(args.split), batch_size, CNNTokenizer())
     # max_epochs for cnn is 100, esm is 500
-    # trainer = Trainer(callbacks=[EarlyStopping(monitor='val_spearman', mode='max', patience=20)], accelerator='gpu', devices=[0], max_epochs=args.max_epochs)
-    trainer = Trainer(callbacks=[EarlyStopping(monitor='val_spearman', mode='max', patience=20)], max_epochs=args.max_epochs)
+    trainer = Trainer(callbacks=[EarlyStopping(monitor='val_spearman', mode='max', patience=20)], accelerator='gpu', devices=[0], max_epochs=args.max_epochs)
+    # trainer = Trainer(callbacks=[EarlyStopping(monitor='val_spearman', mode='max', patience=20)], max_epochs=args.max_epochs)
     # trainer = Trainer(callbacks=[EarlyStopping(monitor='val_loss', mode='min', patience=20)]) # ESM trainer
     trainer.fit(model, datamodule=gb1)
 
     val_dict = trainer.validate(datamodule=gb1)
     test_dict = trainer.test(datamodule=gb1)
+    
+    log_num = sorted([int(s[8:]) for s in os.listdir('lightning_logs') if 'version_' in s])[-1]
 
     with open(results_dir / (args.dataset+'_results.csv'), 'a', newline='') as f:  
-        writer(f).writerow([args.dataset, args.model, args.split, kernel_size, input_size, dropout, batch_size, *val_dict[0].values(), *test_dict[0].values()])
+        writer(f).writerow([args.dataset, args.model, args.split, kernel_size, input_size, dropout, batch_size, *val_dict[0].values(), *test_dict[0].values(), log_num])
