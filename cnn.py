@@ -5,6 +5,7 @@ import pytorch_lightning as pl
 from torchmetrics import SpearmanCorrCoef, MeanSquaredError, SumMetric
 from data import Tokenizer
 from modules import MaskedConv1d, LengthMaxPool1D
+from scipy.stats import spearmanr
 
 class CNN(pl.LightningModule):
     def __init__(self, kernel_size, input_size, dropout):
@@ -19,7 +20,6 @@ class CNN(pl.LightningModule):
         self.val_loss = MeanSquaredError()
         self.test_spearman = SpearmanCorrCoef()
         self.test_loss = MeanSquaredError()
-        self.num_epochs = SumMetric()
 
     def forward(self, x, mask):
         # encoder
@@ -36,19 +36,21 @@ class CNN(pl.LightningModule):
         src, tgt, mask, _ = batch
         ohe = self.generate_ohe(src).float()
         output = self(ohe, mask)
+        
         self.log("training_loss", self.training_loss(output, tgt), on_step=False, on_epoch=True)
         return F.mse_loss(output, tgt)
-        
+    
     def validation_step(self, batch, batch_idx):
         src, tgt, mask, _ = batch
         output = self(self.generate_ohe(src).float(), mask)
         
         output = output.flatten()
         tgt = tgt.flatten()
-        self.log("val_spearman", self.val_spearman(output, tgt), on_step=False, on_epoch=True)
+        
+        self.val_spearman.update(output, tgt)
+        self.log("val_spearman", self.val_spearman, on_step=False, on_epoch=True)
         self.log("val_loss", self.val_loss(output, tgt), on_step=False, on_epoch=True)
-        self.log("num_epochs", self.num_epochs(1), on_step=False, on_epoch=True)
-        return F.mse_loss(output, tgt)
+        return output, tgt
 
     def test_step(self, batch, batch_idx):
         src, tgt, mask, _ = batch
@@ -56,9 +58,11 @@ class CNN(pl.LightningModule):
 
         output = output.flatten()
         tgt = tgt.flatten()
-        self.log("test_spearman", self.test_spearman(output, tgt), on_step=False, on_epoch=True)
+        
+        self.test_spearman.update(output, tgt)
+        self.log("test_spearman", self.test_spearman, on_step=False, on_epoch=True)
         self.log("test_loss", self.test_loss(output, tgt), on_step=False, on_epoch=True)
-        return F.mse_loss(output, tgt, reduction='none')
+        return output, tgt
 
     def configure_optimizers(self):
         optimizer = optim.Adam([
@@ -74,7 +78,7 @@ class CNN(pl.LightningModule):
 
         ohe = []
         for seq in seq_transposed:
-            onehot = torch.FloatTensor(max_len, len(CNNTokenizer.alphabet))
+            onehot = torch.cuda.FloatTensor(max_len, len(CNNTokenizer.alphabet))
             onehot.zero_()
             onehot.scatter_(1, seq, 1)
             ohe.append(onehot)
