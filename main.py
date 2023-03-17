@@ -2,7 +2,7 @@ import argparse
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import EarlyStopping
 from cnn import CNN, CNNTokenizer
-from data import DataModule
+from data import DataModule, preprocessors
 from csv import writer
 from pathlib import Path
 import os
@@ -47,5 +47,11 @@ if __name__ == "__main__":
     val_dict = trainer.validate(datamodule=dm)
     test_dict = trainer.test(datamodule=dm)
 
-    with open(results_dir / (args.dataset+'_results.csv'), 'a', newline='') as f:  
-        writer(f).writerow([args.dataset, args.model, args.split, kernel_size, input_size, dropout, batch_size, *val_dict[0].values(), *test_dict[0].values(), log_num])
+    log_num = sorted([int(s[8:]) for s in os.listdir('lightning_logs') if 'version_' in s])[-1]
+    
+    filename = results_dir / (args.dataset + '_results.csv')
+    with open(filename, 'a', newline='') as f:
+        w = writer(f)
+        if not os.path.isfile(filename):
+            w.writerow(['dataset', 'model', 'split', 'kernel size', 'input size', 'dropout', 'batch size', 'val spearman', 'val loss', 'test spearman', 'test loss', 'lightning log', 'preprocessed'])
+        w.writerow([args.dataset, args.model, args.split, kernel_size, input_size, dropout, batch_size, *val_dict[0].values(), *test_dict[0].values(), log_num, args.dataset in preprocessors])
