@@ -37,7 +37,8 @@ class CNN(pl.LightningModule):
         ohe = self.generate_ohe(src).float()
         output = self(ohe, mask)
         
-        self.log("training_loss", self.training_loss(output, tgt), on_step=False, on_epoch=True)
+        self.training_loss.update(output, tgt)
+        self.log("training_loss", self.training_loss, on_step=False, on_epoch=True)
         return F.mse_loss(output, tgt)
     
     def validation_step(self, batch, batch_idx):
@@ -49,8 +50,8 @@ class CNN(pl.LightningModule):
         
         self.val_spearman.update(output, tgt)
         self.log("val_spearman", self.val_spearman, on_step=False, on_epoch=True)
-        self.log("val_loss", self.val_loss(output, tgt), on_step=False, on_epoch=True)
-        return output, tgt
+        self.val_loss.update(output, tgt)
+        self.log("val_loss", self.val_loss, on_step=False, on_epoch=True)
 
     def test_step(self, batch, batch_idx):
         src, tgt, mask, _ = batch
@@ -61,8 +62,8 @@ class CNN(pl.LightningModule):
         
         self.test_spearman.update(output, tgt)
         self.log("test_spearman", self.test_spearman, on_step=False, on_epoch=True)
-        self.log("test_loss", self.test_loss(output, tgt), on_step=False, on_epoch=True)
-        return output, tgt
+        self.test_loss.update(output, tgt)
+        self.log("test_loss", self.test_loss, on_step=False, on_epoch=True)
 
     def configure_optimizers(self):
         optimizer = optim.Adam([
