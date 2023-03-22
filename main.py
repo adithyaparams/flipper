@@ -2,6 +2,7 @@ import argparse
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import EarlyStopping
 from cnn import CNN, CNNTokenizer
+from esm_model import ESM, ESMTokenizer
 from data import DataModule, preprocessors
 from csv import writer
 from pathlib import Path
@@ -34,14 +35,25 @@ if __name__ == "__main__":
     parser = create_parser()
     args = parser.parse_args()
 
+    if 'esm' in args.model:
+        kernel_size, input_size, dropout = '', '', ''
+    
     results_dir = Path(RESULTS_DIR)
     results_dir.mkdir(exist_ok=True)
-    model = CNN(kernel_size, input_size, dropout)
-    dm = DataModule(args.dataset, '{}.csv'.format(args.split), batch_size, CNNTokenizer())
+    
+    if args.model == 'cnn':
+        model = CNN(kernel_size, input_size, dropout)
+        tok = CNNTokenizer()
+        early_stop = EarlyStopping(monitor='val_spearman', mode='max', patience=20)
+    elif 'esm' in args.model:
+        model = ESM('esm1v', 1280)
+        tok = ESMTokenizer(args.model)
+        early_stop = EarlyStopping(monitor='val_loss', mode='min', patience=20)
+        
     # max_epochs for cnn is 100, esm is 500
-    trainer = Trainer(callbacks=[EarlyStopping(monitor='val_spearman', mode='max', patience=20)], accelerator='gpu', devices=[0], max_epochs=args.max_epochs)
-    # trainer = Trainer(callbacks=[EarlyStopping(monitor='val_spearman', mode='max', patience=20)], max_epochs=args.max_epochs)
-    # trainer = Trainer(callbacks=[EarlyStopping(monitor='val_loss', mode='min', patience=20)]) # ESM trainer
+    dm = DataModule(args.dataset, '{}.csv'.format(args.split), batch_size, tok)
+    trainer = Trainer(callbacks=[early_stop], accelerator='gpu', devices=[0], max_epochs=args.max_epochs)
+    # trainer = Trainer(callbacks=[EarlyStopping(monitor='val_spearman', mode='max', patience=20)], max_epochs=args.max_epochs) @ cpu
     trainer.fit(model, datamodule=dm)
 
     val_dict = trainer.validate(datamodule=dm)
