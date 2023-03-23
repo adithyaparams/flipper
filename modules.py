@@ -31,12 +31,17 @@ class MaskedConv1d(nn.Conv1d):
 
     def forward(self, x, input_mask=None):
         if input_mask is not None:
-            x = x * input_mask
+            x = x * input_mask # n * seq_len * d_emb
         return super().forward(x.transpose(1, 2)).transpose(1, 2)
 
 
 class LengthMaxPool1D(nn.Module):
     def __init__(self, in_dim, out_dim, linear=False):
+        """
+        :param in_dim: input channels
+        :param out_dim: output channels
+        :param linear: add linear layer
+        """
         super().__init__()
         self.linear = linear
         if self.linear:
@@ -50,10 +55,24 @@ class LengthMaxPool1D(nn.Module):
 
 class Attention1d(nn.Module):
     def __init__(self, in_dim):
+        """
+        :param in_dim: input channels
+        """
         super().__init__()
         self.layer = MaskedConv1d(in_dim, 1, 1)
 
     def forward(self, x, input_mask=None):
+        """
+        Aggregate sequence from n * seq_len * d_emb to n * d_emb, using
+        the MaskedConv1d layer to generate a linear layer (seq_len, 1) 
+        with softmaxed weights.
+
+        MaskedConv1d takes a tensor of size (n * seq_len * d_emb), 
+        transposes dim 1, 2 to (n * d_emb * seq_len) then convolves 
+        from d_emb to 1 with kernel size 1 to create a tensor of size
+        (n * seq_len). Weighted sum of this 'attention' layer with x 
+        generates output of size (n * d_emb).
+        """
         n, ell, _ = x.shape # n * seq_len * d_emb
         attn = self.layer(x) # attn.shape = n * seq_len
         attn = attn.view(n, -1)
