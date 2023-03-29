@@ -11,26 +11,22 @@ import os
 RESULTS_DIR = 'results/'
 
 def create_parser():
-    parser = argparse.ArgumentParser(description="train esm")
-    parser.add_argument("dataset", type=str)
-    parser.add_argument("split", type=str)
-    parser.add_argument("model", choices = ["ridge", "cnn", "esm1b", "esm1v", "esm_rand"], type = str)
-    parser.add_argument("max_epochs", type=int)
+    parser = argparse.ArgumentParser(description="Train a flipper model")
+    required = parser.add_argument_group('Required arguments')
+    required.add_argument("dataset", type=str)
+    required.add_argument("split", type=str)
+    required.add_argument("model", choices = ["ridge", "cnn", "esm1b", "esm1v", "esm_rand"], type = str)
+    required.add_argument("max_epochs", type=int)
+    required.add_argument("batch_size", type=int, default=256)
     return parser
 
 
 if __name__ == "__main__":
     seed_everything(10)
-    # random.seed(10)
-    # torch.manual_seed(10)
-
-    # dataset = 'aav'
-    # model = 'cnn'
-    # split = 'two_vs_many'
+    
     kernel_size = 5
     input_size = 43
     dropout = 0.0
-    batch_size = 64
     
     parser = create_parser()
     args = parser.parse_args()
@@ -51,7 +47,7 @@ if __name__ == "__main__":
         early_stop = EarlyStopping(monitor='val_loss', mode='min', patience=20)
         
     # max_epochs for cnn is 100, esm is 500
-    dm = DataModule(args.dataset, '{}.csv'.format(args.split), batch_size, tok)
+    dm = DataModule(args.dataset, '{}.csv'.format(args.split), args.batch_size, tok)
     trainer = Trainer(callbacks=[early_stop], accelerator='gpu', devices=[0], max_epochs=args.max_epochs)
     # trainer = Trainer(callbacks=[EarlyStopping(monitor='val_spearman', mode='max', patience=20)], max_epochs=args.max_epochs) @ cpu
     trainer.fit(model, datamodule=dm)
@@ -66,4 +62,4 @@ if __name__ == "__main__":
         w = writer(f)
         if not os.path.isfile(filename):
             w.writerow(['dataset', 'model', 'split', 'kernel size', 'input size', 'dropout', 'batch size', 'val spearman', 'val loss', 'test spearman', 'test loss', 'lightning log', 'preprocessed'])
-        w.writerow([args.dataset, args.model, args.split, kernel_size, input_size, dropout, batch_size, *val_dict[0].values(), *test_dict[0].values(), log_num, args.dataset in preprocessors])
+        w.writerow([args.dataset, args.model, args.split, kernel_size, input_size, dropout, args.batch_size, *val_dict[0].values(), *test_dict[0].values(), log_num, args.dataset in preprocessors])

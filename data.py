@@ -90,8 +90,6 @@ class DataModule(pl.LightningDataModule):
             # shuffle=True, 
             num_workers=4
         )
-    
-
         
 class Tokenizer(ABC):
     @property
@@ -102,6 +100,9 @@ class Tokenizer(ABC):
     @abstractmethod
     def tokenize(self, seq: str) -> list[int]:
         pass
+    
+    def mask(self, seq_len: int, max_len: int) -> torch.Tensor:
+        return F.pad(torch.ones(seq_len), (0, max_len - seq_len))
 
 class Collator(object):
     def __init__(self, tokenizer: Tokenizer, dataset: str):
@@ -120,7 +121,7 @@ class Collator(object):
         for i, seq in enumerate(seq_tokenized):
             seq_len = len(seq)
             seq_padded[i, :seq_len] = seq
-            mask = F.pad(torch.ones(seq_len), (0, max_len - seq_len))
+            mask = self.tokenizer.mask(seq_len, max_len)
             masks.append(mask)
 
         y = torch.tensor(data[1]).unsqueeze(-1)

@@ -18,14 +18,14 @@ class ESM(pl.LightningModule):
         super(ESM, self).__init__()
         if model_name not in ESM.name_to_model.keys():
             raise ValueError("Invalid model name provided")
-        if pooling not in ["per_aa", "mean", "mut_mean"]:
+        if pooling not in ["per_aa", "mean"]:
             raise AttributeError("Provided invalid pooling method")
 
         self.model, self.alphabet = pretrained.load_model_and_alphabet(ESM.name_to_model[model_name])
         self.model.eval()
         self.pooling = pooling
         if self.pooling == "per_aa":
-            self.attention1d = Attention1d(in_dim=d_embedding) # ???
+            self.attention1d = Attention1d(in_dim=d_embedding)
         self.linear = torch.nn.Linear(d_embedding, d_embedding)
         self.relu = torch.nn.ReLU()
         self.final = torch.nn.Linear(d_embedding, 1)
@@ -74,12 +74,15 @@ class ESM(pl.LightningModule):
         self.log("test_loss", self.test_loss, on_step=False, on_epoch=True)
     
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam([
-            {'params': self.attention1d.parameters(), 'lr': 1e-3},
+        params = [
             {'params': self.linear.parameters(), 'lr': 1e-3},
             {'params': self.final.parameters(), 'lr': 1e-3}
-        ])
-        return optimizer
+        ]
+        
+        if hasattr(self, 'attention1d'):
+            params.append({'params': self.attention1d.parameters(), 'lr': 1e-3})
+            
+        return torch.optim.Adam(params)
 
     def pool(self, x: torch.Tensor, mask: torch.Tensor, dataset: str) -> torch.Tensor:
         with torch.no_grad():
@@ -87,16 +90,8 @@ class ESM(pl.LightningModule):
         if self.pooling == "per_aa":
             x = self.attention1d(x, input_mask=mask) #TODO: mask will look different w non padding=1, will it still work the same
         elif self.pooling == "mean": #TODO: check that output matches mean pooled seqs generated from extract.py
-            seq_lens = [m.argmin() for m in mask] # get index of first 0 in mask (where padding starts)
-            seq_lens = [s if s else x.shape[1] for s in seq_lens] # set seq_len to full length if argmin==0 (no padding)
-            x = torch.stack(seq[:seq_len].mean(0) for seq, seq_len in zip(x, seq_lens))
-        elif self.pooling == "mut_mean":
-            if dataset == "gb1":
-                x = torch.mean(x[:, [38, 39, 40, 53], :], 1)
-            elif dataset == "aav":
-                x = torch.mean(x[:, 560:590, :], 1)
-            else:
-                raise AttributeError("Invalid dataset for mut_mean pooling method")
+            # select non-padding positions with mask and average the value of every position in the sequence
+            x = torch.stack([torch.sum(seq * m.view(-1, 1), dim=0) / torch.sum(m) for seq, m in zip(x, mask)])
         else:
             raise AttributeError("Invalid pooling method")
 
@@ -124,3 +119,13 @@ class ESMTokenizer(Tokenizer):
             tokenized.append(self.alphabet.eos_idx)
         
         return tokenized
+    
+    def mask(self, seq_len: int, max_len: int) -> torch.Tensor:
+        m = super().mask(seq_len, max_len)
+        
+        if self.alphabet.prepend_bos:
+            m[0] = 0
+        if self.alphabet.append_eos:
+            m[seq_len-1] = 0
+            
+        return m
