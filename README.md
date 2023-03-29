@@ -10,10 +10,32 @@ General comments on folder breakup and structural changes compared to the [FLIP 
 
 ### Quick start
 Instructions to get a baseline model running on a GB1 split are included below.
+1. Initialize conda environment
+2. Unzip data files with splits
+3. Run main.py
 ```bash
 conda env create -n flipper --file environment.yml
 cd splits/gb1 && unzip splits.zip && cd ../..
 python main.py gb1 two_vs_rest cnn 100
+```
+
+### Setting hyperparameters
+Hyperparameters are set through an argument parser in main.py; options can be viewed by checking the flags on `main.py`.
+```bash
+(flipper) jupyter@flip-repro-test-1:~/src/didactic-robot$ python main.py -h
+usage: main.py [-h] {aav,gb1} split {cnn,esm1b,esm1v} max_epochs batch_size
+
+Train a flipper model
+
+options:
+  -h, --help         show this help message and exit
+
+Required arguments:
+  {aav,gb1}          Choose the type of dataset
+  split              Choose the split within the dataset
+  {cnn,esm1b,esm1v}  Choose the model
+  max_epochs         Choose the max num of epochs
+  batch_size         Choose the batch size
 ```
 
 ## Plug in a model
