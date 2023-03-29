@@ -5,7 +5,6 @@ import pytorch_lightning as pl
 from torchmetrics import SpearmanCorrCoef, MeanSquaredError, SumMetric
 from data import Tokenizer
 from modules import MaskedConv1d, LengthMaxPool1D
-from scipy.stats import spearmanr
 
 class CNN(pl.LightningModule):
     def __init__(self, kernel_size, input_size, dropout):
