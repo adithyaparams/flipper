@@ -35,14 +35,13 @@ preprocessors = {
 
 
 class DataModule(pl.LightningDataModule):
-    def __init__(self, dataset, split, batch_size, encoder, start=0, end=None):
+    def __init__(self, dataset, split, batch_size, encoder, preprocess):
         super().__init__()
         self.data_dir = Path('splits/')
         self.dataset = dataset
         self.split = split
         self.batch_size = batch_size
-        self.start = start
-        self.end = end
+        self.preprocess = preprocess
 
         self.collate = Collator(encoder, dataset)
 
@@ -54,7 +53,7 @@ class DataModule(pl.LightningDataModule):
 
         
         df.sequence = df.sequence.apply(lambda s: re.sub(r'[^A-Z]', '', s.upper())) #remove special characters
-        if self.dataset in preprocessors:
+        if self.dataset in preprocessors and self.preprocess:
             df = preprocessors[self.dataset](df)
         max_length = max(df.sequence.str.len())
         
