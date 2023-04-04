@@ -7,8 +7,8 @@ defaults:
   - data: default.yaml
   - model: cnn.yaml
   - callbacks: spearman_early_stopping.yaml
-  - logger: null # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
-  - trainer: cpu.yaml
+  - logger: csv.yaml # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
+  - trainer: gpu.yaml
   - paths: default.yaml
   - extras: default.yaml
   # - hydra: default.yaml
