@@ -1,0 +1,5 @@
+defaults:
+  - base.yaml
+
+encoder:
+  _target_: src.models.esm_module.ESMTokenizer

@@ -1,0 +1,5 @@
+defaults:
+  - cnn_tokenizer.yaml
+
+dataset: "gb1"
+split: "two_vs_rest"

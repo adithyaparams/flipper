@@ -1,0 +1,7 @@
+_target_: src.data.datamodule.DataModule
+dataset: ???
+split: ???
+batch_size: 256
+encoder: ???
+preprocess: True
+data_dir: ${paths.data_dir}

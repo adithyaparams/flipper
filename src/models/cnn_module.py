@@ -2,9 +2,9 @@ import torch
 from torch import optim, nn
 from torch.nn import functional as F
 import pytorch_lightning as pl
-from torchmetrics import SpearmanCorrCoef, MeanSquaredError, SumMetric
-from data import Tokenizer
-from modules import MaskedConv1d, LengthMaxPool1D
+from torchmetrics import SpearmanCorrCoef, MeanSquaredError
+from .components.tokenizer import Tokenizer
+from .components.modules import MaskedConv1d, LengthMaxPool1D
 
 class CNN(pl.LightningModule):
     def __init__(self, kernel_size, input_size, dropout):

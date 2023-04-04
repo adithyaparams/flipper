@@ -1,14 +1,10 @@
 import pytorch_lightning as pl
 import torch
 from torch.utils.data import Dataset, DataLoader
-import torch.nn.functional as F
 from pathlib import Path
 import pandas as pd
-import numpy as np
 import re
-from typing import List, Any
-from abc import ABC, abstractmethod
-
+from ..models.components.tokenizer import Tokenizer
 
 def preprocess_aav_data(df):
     """
@@ -35,9 +31,9 @@ preprocessors = {
 
 
 class DataModule(pl.LightningDataModule):
-    def __init__(self, dataset, split, batch_size, encoder, preprocess):
+    def __init__(self, dataset, split, batch_size, encoder, preprocess, data_dir = 'data/'):
         super().__init__()
-        self.data_dir = Path('splits/')
+        self.data_dir = Path(data_dir)
         self.dataset = dataset
         self.split = split
         self.batch_size = batch_size
@@ -46,7 +42,7 @@ class DataModule(pl.LightningDataModule):
         self.collate = Collator(encoder, dataset)
 
     def prepare_data(self):
-        PATH = self.data_dir / self.dataset / 'splits' / self.split 
+        PATH = self.data_dir / self.dataset / 'splits' / "{}.csv".format(self.split)
         print('reading dataset:', self.split)
             
         df = pd.read_csv(PATH)
@@ -89,19 +85,6 @@ class DataModule(pl.LightningDataModule):
             # shuffle=True, 
             num_workers=4
         )
-        
-class Tokenizer(ABC):
-    @property
-    @abstractmethod
-    def pad_tok(self) -> int:
-        pass
-
-    @abstractmethod
-    def tokenize(self, seq: str) -> list[int]:
-        pass
-    
-    def mask(self, seq_len: int, max_len: int) -> torch.Tensor:
-        return F.pad(torch.ones(seq_len), (0, max_len - seq_len))
 
 class Collator(object):
     def __init__(self, tokenizer: Tokenizer, dataset: str):
