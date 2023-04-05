@@ -125,11 +125,23 @@ class NewModel(LightningModule):
         ...
 ```
 
-```
-TODO: add model config details
+Once the model is written, a respective config file needs to be added in `configs/models`. An example can be found in `configs/models/cnn.yaml`.
+
+```yaml
+_target_: src.models.cnn_module.CNN
+kernel_size: 5
+input_size: 43
+dropout: 0.0
 ```
 
-<!-- Once the model is written, a respective config file needs to be added in `configs/models`. -->
+The config file identifies the class from which the model can be instantiated and arguments provided during initialization.
+
+```python
+class CNN(pl.LightningModule):
+    def __init__(self, kernel_size, input_size, dropout):
+```
+
+The config file should then be added to `train.yaml` (ie. `model: cnn.yaml`) to include those attributes.
 
 ### Tokenizer
 Tokenizers convert strings (amino-acid sequences) to the input models require; they often vary by model, passed into the `DataModule` to tokenize sequences while generating mini-batches. An abstract Tokenizer class can be found in `src/models/components/tokenizer.py` (included below for convenience).
