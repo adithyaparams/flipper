@@ -1,5 +1,5 @@
 defaults:
-  - cnn_tokenizer.yaml
+  - base.yaml
 
 dataset: "aav"
 split: "two_vs_many"

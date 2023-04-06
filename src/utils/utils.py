@@ -8,6 +8,14 @@ from src.utils import pylogger, rich_utils
 
 log = pylogger.get_pylogger(__name__)
 
+model_to_tok = {
+    'src.models.cnn_module.CNN': 'src.models.cnn_module.CNNTokenizer',
+    'src.models.esm_module.ESM': 'src.models.esm_module.ESMTokenizer'
+}
+
+def add_tokenizer(cfg: DictConfig) -> DictConfig:
+    cfg.data.encoder._target_ = model_to_tok[cfg.model._target_]
+    return cfg
 
 def extras(cfg: DictConfig) -> None:
     """Applies optional utilities before the task is started.
