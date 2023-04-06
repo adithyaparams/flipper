@@ -1,3 +1,5 @@
 _target_: src.models.esm_module.ESM
 model_name: "esm1v"
 d_embedding: 1280
+pooling: "per_aa"
+lr: 0.001
