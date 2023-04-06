@@ -2,7 +2,9 @@
 
 This repository is a reproduction of the [Fitness Landscape Inference for Proteins (FLIP) benchmark](https://www.biorxiv.org/content/10.1101/2021.11.09.467890v1.full), built with [PyTorch Lightning](https://pytorch-lightning.readthedocs.io/en/1.9.1/) and [Hydra](https://github.com/ashleve/lightning-hydra-template).
 
-<!-- * a few modular parts, configured through yaml files - most important are data, model, callbacks, trainer -->
+```
+TODO: (from Stephen's review) Once we're done, I think it would be helpful to have a table showing results comparison to the original FLIP paper here and a section on "Why?" where we talk about 1) using lightning, 2) making it easier to plug in other model types via standardized abstractions.
+```
 
 ## Overview
 General comments on folder breakup and structural changes compared to the [FLIP repo](https://github.com/J-SNACKKB/FLIP) included below.
@@ -157,8 +159,12 @@ class Tokenizer(ABC):
 ```
 A full example [can be found in](https://github.com/an1lam/flipper/blob/1d90ab3569275fd4101dd1e8a32fd8adb936be4b/src/models/cnn_module.py#L88) `src/models/cnn_module.py`, under `CNNTokenizer`.
 
-```
-TODO: add key value mapping config details
+The tokenizer's configuration is taken care of internally once `model._target_` is set in the config. To do this for a new set of model/tokenizer, a new field needs to be added to the `model_to_tok` dictionary in `utils/utils.py`.
+```python
+model_to_tok = {
+    'src.models.cnn_module.CNN': 'src.models.cnn_module.CNNTokenizer',
+    'src.models.esm_module.ESM': 'src.models.esm_module.ESMTokenizer'
+}
 ```
 
 ### EarlyStopping
@@ -177,6 +183,22 @@ early_stopping:
 This configuration stops training if the Spearman coefficient calculated on the validation set has not improved in the last 20 epochs.
 
 ## Adding a dataset
-```
-TODO: add details (format of csv to be compatible with DataModule, set and validation fields), modifying configs/data to identify the dataset, split
+### Adding data
+Splits for a new dataset should be provided in a `.csv` file, under `data/{dataset_name}/{split_name}.csv`. All splits should be compressed into a `data/{dataset_name}/splits.zip`, which is the only file that should be pushed to the remote.
+
+On the structure of a single split:
+* `sequences` column should contain the amino acid sequences
+* `set` column should == `'test'` || `'train'`
+* `validation` column should == `True` || `NaN`
+* `target` column should contain a fitness value
+
+### Adjusting config
+Once the data has been added to `/data`, it can be accessed in a training run by editing `configs/data/default.yaml`.
+
+```yaml
+defaults:
+  - base.yaml
+
+dataset: {dataset_name}
+split: {split_name}
 ```
