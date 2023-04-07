@@ -1,7 +1,8 @@
 # Repo specific
 lightning_logs/
 results/
-splits/**/splits
+data/**/splits
+outputs/
 
 *.DS_Store
 .vscode/

@@ -1,11 +1,10 @@
-from typing import Tuple
 import torch
 import pytorch_lightning as pl
 from torch.nn import functional as F
 from torchmetrics import MeanSquaredError, SpearmanCorrCoef
 from esm import pretrained, data
-from modules import Attention1d
-from data import Tokenizer
+from .components.modules import Attention1d
+from .components.tokenizer import Tokenizer
 
 class ESM(pl.LightningModule):
     name_to_model = {
@@ -14,7 +13,7 @@ class ESM(pl.LightningModule):
     }
 
     """Outputs of the ESM model with the attention1d"""
-    def __init__(self, model_name, d_embedding, pooling="per_aa", lr=0.001): # [batch x sequence(751) x embedding (1280)] --> [batch x embedding] --> [batch x 1]
+    def __init__(self, model_name, d_embedding, pooling="per_aa", lr=1e-3): # [batch x sequence(751) x embedding (1280)] --> [batch x embedding] --> [batch x 1]
         super(ESM, self).__init__()
         if model_name not in ESM.name_to_model.keys():
             raise ValueError("Invalid model name provided")
@@ -75,12 +74,12 @@ class ESM(pl.LightningModule):
     
     def configure_optimizers(self):
         params = [
-            {'params': self.linear.parameters(), 'lr': 1e-3},
-            {'params': self.final.parameters(), 'lr': 1e-3}
+            {'params': self.linear.parameters(), 'lr': self.lr},
+            {'params': self.final.parameters(), 'lr': self.lr}
         ]
         
         if hasattr(self, 'attention1d'):
-            params.append({'params': self.attention1d.parameters(), 'lr': 1e-3})
+            params.append({'params': self.attention1d.parameters(), 'lr': self.lr})
             
         return torch.optim.Adam(params)
 
@@ -99,9 +98,7 @@ class ESM(pl.LightningModule):
 
 
 class ESMTokenizer(Tokenizer):
-    def __init__(self, model_name):
-        if model_name not in ESM.name_to_model.keys():
-            raise ValueError("Invalid model name provided")
+    def __init__(self):
         # https://github.com/facebookresearch/esm/blob/main/esm/data.py#L151, both esm1v/1b use this alphabet
         self.alphabet = data.Alphabet.from_architecture('ESM-1b')
         self._pad_tok = self.alphabet.padding_idx

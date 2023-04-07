@@ -1,0 +1,7 @@
+defaults:
+  - base_early_stopping.yaml
+
+early_stopping:
+  monitor: "val_spearman"
+  patience: 20
+  mode: "max"
