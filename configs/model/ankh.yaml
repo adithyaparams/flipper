@@ -1,0 +1,5 @@
+_target_: src.models.ankh_module.AnkhPredictor
+model_name: "base"
+d_embedding: 144
+pooling: "per_aa"
+lr: 0.001
