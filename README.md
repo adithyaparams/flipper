@@ -2,7 +2,7 @@
 
 This repository is a reproduction of the [Fitness Landscape Inference for Proteins (FLIP) benchmark](https://www.biorxiv.org/content/10.1101/2021.11.09.467890v1.full), built with [PyTorch Lightning](https://pytorch-lightning.readthedocs.io/en/1.9.1/) and [Hydra](https://github.com/ashleve/lightning-hydra-template).
 
-![](/performance.png)
+![](/assets/performance.png)
 
 
 An extended description of the context behind flipper can be found [here](https://adithyaparams.com/posts/2023/06/flipper/). It leverages Lightning to allow users to easily extend the FLIP benchmark with new models and datasets and uses Hydra to simplify configuration and hyperparameter search.
